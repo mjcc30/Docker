@@ -1,0 +1,14 @@
+route:
+  group_by: [Alertname]
+  # Send all notifications to me.
+  receiver: email-me
+
+receivers:
+- name: email-me
+  email_configs:
+  - to: domaine.fr@gmail.com
+    from: domaine.fr@gmail.com
+    smarthost: smtp.gmail.com:587
+    auth_username: "domaine.fr@gmail.com"
+    auth_identity: "domaine.fr@gmail.com"
+    auth_password: "password"

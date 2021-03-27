@@ -1,0 +1,72 @@
+version: '3.7'
+services:
+
+  ghost:
+    depends_on:
+      - db
+    container_name: ghost
+    image: ghost:latest
+    ports:
+      - 2368:2368
+    environment:
+      - database__client=mysql
+      - database__connection__host=db
+      - database__connection__user=root
+      - database__connection__password=pass1
+      - database__connection__database=ghost
+      #- url=https://ghost.blabla.fr/
+      - TZ='Europe/Paris'
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.ghost-secure.entrypoints=https
+      - traefik.http.routers.ghost-secure.rule=Host(`ghost.domain.fr`)
+      - traefik.http.routers.ghost-secure.tls.certresolver=cert
+      - traefik.http.routers.ghost-secure.service=ghost
+      - traefik.http.services.ghost.loadbalancer.server.port=2368
+    volumes:
+      - www-data:/var/lib/ghost/content
+    networks:
+      - web
+      - blog
+
+  db:
+    image: mariadb
+    container_name: mariadb
+    environment:
+      - MYSQL_ROOT_PASSWORD=pass1
+      - MYSQL_DATABASE=db1
+      - MYSQL_USER=user1
+      - MYSQL_PASSWORD=pass2
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - blog
+
+  ghost_static:
+    container_name: static
+    build:
+      context: ./gatsby/.
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.gatsby-secure.entrypoints=https
+      - traefik.http.routers.gatsby-secure.rule=Host(`gatsby.domain.fr`)
+      - traefik.http.routers.gatsby-secure.tls.certresolver=cert
+      - traefik.http.routers.gatsby-secure.service=gatsby
+      - traefik.http.services.gatsby.loadbalancer.server.port=80
+    networks:
+      - web
+
+volumes:
+  mysql-data:
+    name: mysql-data
+  www-data:
+    name: www-data
+networks:
+  blog:
+    name: blog
+  web:
+    external:
+      name: web

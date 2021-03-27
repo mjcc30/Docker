@@ -1,0 +1,83 @@
+version: "3.7"
+services:
+
+  db:
+    image: mariadb
+    volumes:
+      - ./db:/var/lib/mysql/
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    restart: always
+    deploy:
+      mode: global
+    networks:
+      - lemp
+
+  nginx:
+    image: nginx
+    volumes:
+      - ./data:/usr/share/nginx/html
+      - ./conf:/etc/nginx/conf.d
+      - ./logs:/var/log/nginx
+    restart: always
+    deploy:
+      replicas: 3
+    links:
+      - php:php
+    depends_on:
+      - php
+    networks:
+      - web
+      - lemp
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.lemp-secure.entrypoints=https
+      - traefik.http.routers.lemp-secure.rule=Host(`lemp.domaine.fr`)
+      - traefik.http.routers.lemp-secure.tls.certresolver=cert
+      - traefik.http.routers.lemp-secure.service=lemp
+      - traefik.http.services.lemp.loadbalancer.server.port=80
+
+  php:
+    image: php:fpm
+    volumes:
+      - ./data:/usr/share/nginx/html
+    restart: always
+    deploy:
+      mode: global
+    networks:
+      - lemp
+
+  myadmin:
+    image: phpmyadmin
+    restart: always
+    deploy:
+      mode: global
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.lemp-myadmin-secure.entrypoints=https
+      - traefik.http.routers.lemp-myadmin-secure.rule=Host(`lemp-myadmin.domaine.fr`)
+      - traefik.http.routers.lemp-myadmin-secure.tls.certresolver=cert
+      - traefik.http.routers.lemp-myadmin-secure.service=lemp-myadmin
+      - traefik.http.services.lemp-myadmin.loadbalancer.server.port=80
+    links:
+      - db:db
+    networks:
+      - web
+      - lemp
+
+networks:
+  lemp:
+    name: lemp
+  gateway:
+    name: web
+    external: true

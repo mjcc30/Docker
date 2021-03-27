@@ -1,0 +1,26 @@
+version: '3.6'
+services:
+  jenkins:
+    image: jenkins4eval/jenkins
+    container_name: jenkins
+    restart: always
+    user: 0:0
+    ports:
+      - 446:443
+      - 5000:5000
+    volumes:
+      - ./data:/var/jenkins_home:z
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.jenkins-secure.entrypoints=https
+      - traefik.http.routers.jenkins-secure.rule=Host(`jenkins.domaine.fr`)
+      - traefik.http.routers.jenkins-secure.tls.certresolver=cert
+      - traefik.http.routers.jenkins-secure.service=jenkins
+      - traefik.http.services.jenkins.loadbalancer.server.port=8080
+    networks:
+      - web
+networks:
+  web:
+    external:
+      name: web

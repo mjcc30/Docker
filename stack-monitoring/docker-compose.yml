@@ -1,0 +1,153 @@
+version: '3.7'
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    restart: unless-stopped
+    user: 0:0
+    volumes:
+      - ./prometheus/config:/etc/prometheus/
+      - ./prometheus/data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - 9090:9090
+    links:
+      - alertmanager:alertmanager
+      - cadvisor:cadvisor
+    depends_on:
+      - cadvisor
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.prometheus-secure.entrypoints=https
+      - traefik.http.routers.prometheus-secure.rule=Host(`prometheus.domaine.fr`)
+      - traefik.http.routers.prometheus-secure.tls.certresolver=cert
+      - traefik.http.routers.prometheus-secure.service=prometheus
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+    networks:
+      - web
+      - monitoring
+    deploy:
+      mode: global
+
+  cadvisor:
+    container_name: cadvisor
+    restart: unless-stopped
+    image: budry/cadvisor-arm:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    deploy:
+      mode: global
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.cadvisor-secure.entrypoints=https
+      - traefik.http.routers.cadvisor-secure.rule=Host(`cadvisor.domaine.fr`)
+      - traefik.http.routers.cadvisor-secure.tls.certresolver=cert
+      - traefik.http.routers.cadvisor-secure.service=cadvisor
+      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
+    networks:
+      - web
+      - monitoring
+
+  collectd:
+    container_name: collectd
+    image: prom/collectd-exporter:master
+    restart: unless-stopped
+    ports:
+      - 9103:9103
+    restart: always
+    networks:
+      - monitoring
+
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    ports:
+      - 9100:9100
+    networks:
+      - monitoring
+    deploy:
+      mode: global
+
+  alertmanager:
+    container_name: alertmanager
+    image: prom/alertmanager:v0.21.0
+    restart: unless-stopped
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager/config:/etc/alertmanager/
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - monitoring
+    deploy:
+      mode: global
+
+  grafana:
+    container_name: grafana
+    restart: unless-stopped
+    image: grafana/grafana
+    user: 0:0
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    env_file:
+      - .grafana
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.grafana-secure.entrypoints=https
+      - traefik.http.routers.grafana-secure.rule=Host(`grafana.domaine.fr`)
+      - traefik.http.routers.grafana-secure.tls.certresolver=cert
+      - traefik.http.routers.grafana-secure.service=grafana
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    networks:
+      - web
+      - monitoring
+
+  blackbox_exporter:
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    image: prom/blackbox-exporter:latest
+    ports:
+      - 9115:9115
+    volumes:
+      - ./blackboxexporter/config:/etc/blackboxexporter/
+    command:
+      - '--config.file=/etc/blackboxexporter/config.yml'
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+   name: monitoring
+  web:
+    external:
+      name: web

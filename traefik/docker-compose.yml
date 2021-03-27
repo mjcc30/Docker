@@ -1,0 +1,36 @@
+version: '3.6'
+services:
+
+  traefik:
+    container_name: traefik
+    image: traefik:v2.4.2
+    restart: unless-stopped
+    command: --web --docker --docker.domain=docker.localhost --logLevel=DEBUG
+    # Ports d'écoute
+    ports:
+      - 80:80
+      - 443:443
+    # Variables d'environnement
+    env_file:
+      - ./config/.ovh-api.env
+    volumes:
+      # Pour que traefik puisse écouter les events Docker
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Mapping de la configuration statique
+      - ./config/traefik.yml:/etc/traefik/traefik.yml:ro
+      # Mapping du dossier de conf dynamique
+      - ./config/dynamique:/etc/dyn_config/
+      # Mapping du fichier de stockage des certificats
+      - ./config/acme.json:/acme.json
+      - ./logs:/var/log/traefik
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Europe/Paris
+    networks:
+      - web
+
+networks:
+  web:
+   external:
+     name: web

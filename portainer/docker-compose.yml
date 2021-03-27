@@ -1,0 +1,27 @@
+version: '3.6'
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:2.1.1
+    restart: unless-stopped
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - 9000:9000
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.portainer-secure.entrypoints=https
+      - traefik.http.routers.portainer-secure.rule=Host(`portainer.domaine.fr`)
+      - traefik.http.routers.portainer-secure.tls.certresolver=cert
+      - traefik.http.routers.portainer-secure.service=portainer
+      - traefik.http.services.portainer.loadbalancer.server.port=9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/data
+    networks:
+      - web
+
+networks:
+  web:
+   external:
+     name: web

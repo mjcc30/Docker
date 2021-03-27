@@ -1,0 +1,29 @@
+http:
+  routers:
+    api:
+      rule: "Host(`traefik.domaine.fr`)"
+      service: api@internal
+      middlewares:
+        - redirection
+    api-secure:
+      rule: "Host(`traefik.domaine.fr`)"
+      service: api@internal
+      tls:
+        certResolver: cert
+      middlewares:
+        - auth
+  middlewares:
+    auth:
+      basicAuth:
+        users:
+          #Bcrypt encode password admin
+          - "admin:$2y$10$sqgVdrmQxXQgYIpg3BycVuZ2J8sFSHheVnmd728KkE7fznFSlxA0u"
+          - "maxime:$2y$10$aVuMldvC3tJ0ft7KYDLTDeloir66qYxBQlpBf21bUGfv3ShR/QiXe"
+          - "esteban:$2y$10$NV5cVVrIx0p7CUc2CTIAGOKgIe9xZvHpdIqlsp9kwhrn54G3sinVC"
+          - "doray:$2y$10$5.nCSwjW/JTQFO1Gpnnix.rWgQM9TTm0QXeNWRFb8oo2gdq6AIwE6"
+          - "louis:$2y$10$O9lIRq4gZ8BulUCwlvlx2O1gO3ukgq6LmOijpI3nW8QTjlum2c/yW"
+    redirection:
+      redirectScheme:
+        scheme: https
+        permanent: true
+

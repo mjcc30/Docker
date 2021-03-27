@@ -1,0 +1,31 @@
+version: '3.6'
+services:
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    user: 0:0
+    ports:
+     - 3000:3000
+    volumes:
+     - ./data:/var/lib/grafana
+     - ./etc:/etc/grafana/provisioning/
+     - /etc/timezone:/etc/timezone:ro
+     - /etc/localtime:/etc/localtime:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.grafana-secure.entrypoints=https
+      - traefik.http.routers.grafana-secure.rule=Host(`grafana.domaine.fr`)
+      - traefik.http.routers.grafana-secure.tls.certresolver=cert
+      - traefik.http.routers.grafana-secure.service=grafana
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    networks:
+     - web
+     - monitoring
+networks:
+  monitoring:
+   name: monitoring
+  web:
+    external:
+      name: web

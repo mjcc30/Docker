@@ -1,0 +1,73 @@
+version: '3.6'
+services:
+  lemp-db:
+    container_name: lemp-db
+    image: mariadb:latest
+    restart: unless-stopped
+    volumes:
+      - ./db:/var/lib/mysql/
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - lemp
+  lemp-nginx:
+    container_name: lemp-nginx
+    image: nginx:latest
+    restart: unless-stopped
+    depends_on:
+      - lemp-db
+      - lemp-php
+    links:
+      - lemp-php
+    volumes:
+      - ./data:/usr/share/nginx/html
+      - ./conf:/etc/nginx/conf.d
+      - ./logs:/var/log/nginx
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.lemp-secure.entrypoints=https
+      - traefik.http.routers.lemp-secure.rule=Host(`lemp.domaine.fr`)
+      - traefik.http.routers.lemp-secure.tls.certresolver=cert
+      - traefik.http.routers.lemp-secure.service=lemp
+      - traefik.http.services.lemp.loadbalancer.server.port=80
+    networks:
+      - lemp
+      - web
+  lemp-php:
+    container_name: lemp-php
+    image: php:fpm
+    restart: unless-stopped
+    volumes:
+      - ./data:/usr/share/nginx/html
+    networks:
+      - lemp
+  lemp-myadmin:
+    container_name: lemp-myadmin
+    image: phpmyadmin
+    restart: always
+    depends_on:
+      - lemp-db
+    environment:
+      PMA_HOST: lemp-db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.lemp-myadmin-secure.entrypoints=https
+      - traefik.http.routers.lemp-myadmin-secure.rule=Host(`lemp-myadmin.domaine.fr`)
+      - traefik.http.routers.lemp-myadmin-secure.tls.certresolver=cert
+      - traefik.http.routers.lemp-myadmin-secure.service=lemp-myadmin
+      - traefik.http.services.lemp-myadmin.loadbalancer.server.port=80
+    networks:
+      - lemp
+      - web
+networks:
+  lemp:
+    name: lemp
+  web:
+    external:
+      name: web

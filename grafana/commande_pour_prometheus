@@ -1,0 +1,15 @@
+N'oubliez pas de changer les valeurs en fonction de votre conteneur grafana et prometheus
+   grafana => user = admin
+   grafana => password = admin
+   grafana => port = 3000
+   grafana => url = "http://localhost:3000/api/datasources"
+   prometheus => port = 9091
+   prometheus => data = {
+                          "name":"",
+                          "isDefault":true,
+                          "type":"test",
+                          "url":"http://localhost:9091",
+                          "access":"proxy",
+                          "basicAuth":false
+                        }
+   curl --user admin:admin "http://localhost:3000/api/datasources" -X POST -H 'Content-Type: application/json;charset=UTF-8' --data-binary '{"name":"test","type":"prometheus","access":"proxy","url":"http://localhost:9091","basicAuth":false,"isDefault":true}'

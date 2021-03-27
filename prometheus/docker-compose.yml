@@ -1,0 +1,37 @@
+version: '3.6'
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+     - ./etc:/etc/prometheus/
+     - ./data:/prometheus/
+     - /etc/timezone:/etc/timezone:ro
+     - /etc/localtime:/etc/localtime:ro
+    command: 
+     - "--config.file=/etc/prometheus/prometheus.yml"
+     - "--storage.tsdb.path=/prometheus"
+     - "--web.route-prefix=/"
+     - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+     - "--web.console.templates=/usr/share/prometheus/consoles"
+    ports:
+     - 9091:9090
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.prometheus-secure.entrypoints=https
+      - traefik.http.routers.prometheus-secure.rule=Host(`prometheus.domaine.fr`)
+      - traefik.http.routers.prometheus-secure.tls.certresolver=cert
+      - traefik.http.routers.prometheus-secure.service=prometheus
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+    networks:
+     - web
+     - monitoring
+networks:
+  monitoring:
+   name: monitoring
+  web:
+    external:
+      name: web
+

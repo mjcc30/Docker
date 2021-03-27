@@ -1,0 +1,59 @@
+entryPoints:
+  http:
+    address: ":80"
+  https:
+    address: ":443"
+  dashboard:
+    address: ":8080"
+
+metrics:
+  prometheus:
+    entryPoint: dashboard
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
+log:
+  # Default: "ERROR"
+  level: INFO
+
+api:
+  dashboard: true
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    # Expose containers by default in traefik
+    exposedByDefault: true
+  # Enable the file provider to define routers / middlewares / services in file
+  file:
+    directory: "/etc/dyn_config/"
+    watch: true
+
+certificatesResolvers:
+  cert:
+    # Enable ACME (Let's Encrypt): automatic SSL.
+    acme:
+      email: "webmaster@domaine.fr"
+      storage: "/acme.json"
+
+      ## CA server to use.
+      ## Par défaut :
+      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+      ## Environnement de qualification de LE
+      #caServer: "https://acme-staging-v02.api.letsencrypt.org/directory"
+
+      ## Use a HTTP-01 ACME challenge.
+      #httpChallenge:
+      #  entryPoint: "web"
+
+      # Use a DNS-01 ACME challenge rather than HTTP-01 challenge.
+      dnsChallenge:
+        provider: "ovh"
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
