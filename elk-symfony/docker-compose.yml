@@ -95,7 +95,7 @@ services:
       - .docker/logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml:cached
       - .docker/logstash/conf.d:/etc/logstash/conf.d:cached
       - .docker/nginx/logs:/var/log/nginx:cached
-      - ./var/log:/usr/share/nginx/html/var/log:cached
+      - ./var/log:/var/www/symfony/var/log:cached
     networks:
       - web
 
