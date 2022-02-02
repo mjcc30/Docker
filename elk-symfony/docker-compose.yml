@@ -1,0 +1,119 @@
+version: "3.9"
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce
+    restart: unless-stopped
+    command: -H unix:///var/run/docker.sock
+    ports:
+      - 9090:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .docker/portainer/data:/data
+    networks:
+      - web
+
+  lemp-db:
+    container_name: lemp-db
+    image: mysql:8.0.28
+    restart: unless-stopped
+    ports:
+      - 3306:3306
+    volumes:
+      - .docker/mysql/data:/var/lib/mysql/
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: lemp
+      MYSQL_USER: lemp
+      MYSQL_PASSWORD: lemp
+    networks:
+      - web
+
+  lemp-nginx:
+    container_name: lemp-nginx
+    image: nginx:latest
+    restart: unless-stopped
+    ports:
+      - 8080:80
+    depends_on:
+      - lemp-db
+      - lemp-php
+    links:
+      - lemp-php
+    volumes:
+      - .:/usr/share/nginx/html
+      - .docker/nginx/conf:/etc/nginx/conf.d
+      - .docker/nginx/logs:/var/log/nginx
+    networks:
+      - web
+
+  lemp-php:
+    container_name: lemp-php
+    # image: php:fpm
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - 9000:9000
+    volumes:
+      - .:/usr/share/nginx/html
+    networks:
+      - web
+
+  lemp-myadmin:
+    container_name: lemp-myadmin
+    image: phpmyadmin
+    restart: always
+    ports:
+      - 8081:80
+    depends_on:
+      - lemp-db
+    environment:
+      PMA_HOST: lemp-db
+      MYSQL_ROOT_PASSWORD: lemp
+    networks:
+      - web
+
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.2
+    environment:
+      discovery.type: "single-node"
+    ports:
+      - "9200:9200"
+    networks:
+      - web
+
+  logstash:
+    container_name: logstash
+    image: docker.elastic.co/logstash/logstash:7.16.2
+    depends_on:
+      - elasticsearch
+    links:
+      - elasticsearch
+    volumes:
+      - .docker/logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml:cached
+      - .docker/logstash/conf.d:/etc/logstash/conf.d:cached
+      - .docker/nginx/logs:/var/log/nginx:cached
+      - ./var/log:/usr/share/nginx/html/var/log:cached
+    networks:
+      - web
+
+  kibana:
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    image: docker.elastic.co/kibana/kibana:7.16.2
+    environment:
+      SERVER_NAME: localhost
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    links:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    networks:
+      - web
+
+networks:
+  web:
+    name: web
